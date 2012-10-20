@@ -1,6 +1,7 @@
 #Require rubygems for old (pre 1.9 versions of Ruby and Debian-based systems)
 require 'rubygems'
 require 'client_world_connection.rb'
+require 'solver_aggregator.rb'
 require 'solver_world_model.rb'
 require 'wm_data.rb'
 require 'buffer_manip.rb'
@@ -23,7 +24,7 @@ case ARGV[2]
 when "add"
   #Extra arguments list the sensor ID, URI, and attribute type
   if (ARGV.length != 8)
-    puts "The 'add' command requires a world model IP and port, sensor ID, attribute type, and object ID"
+    puts "The 'add' command requires a world model IP and solver port, sensor ID, attribute type, and object ID"
     exit
   end
   wmip = ARGV[3]
@@ -51,7 +52,7 @@ when "remove"
   #Delete an ID and all of its attributes (should add something to also just delete attributes)
   #Extra arguments list the sensor ID, URI, and attribute type
   if (ARGV.length != 6)
-    puts "The 'remove' command requires a world model IP and port and an object ID to delete"
+    puts "The 'remove' command requires a world model IP and solver port and an object ID to delete"
     exit
   end
   origin = ARGV[0]
@@ -69,7 +70,7 @@ when "modify"
 when "scan"
   #Scan for sensors that are not known in the world model
   if (ARGV.length != 7)
-    puts "The 'scan' command requires an aggregator IP and port and a world model IP and port"
+    puts "The 'scan' command requires an aggregator IP and port and a world model IP and client port"
     exit
   end
   origin = ARGV[0]
@@ -92,10 +93,14 @@ when "scan"
     while (sq.handleMessage and (getOwlTime() - now < 3000)) do
       if (sq.available_packets.length != 0) then
         for packet in sq.available_packets do
-          new_ids[device_id] = false
+          puts packet
+          new_ids[packet.device_id] = false
         end
       end
+      sq.available_packets.clear
     end
+    #Finished with the aggregator
+    sq.close()
   end
   #Connect to the world model as a client
   cwm = ClientWorldConnection.new(wmip, port)
@@ -115,6 +120,10 @@ when "scan"
   #anything in the new_ids list is new
   new_ids.each{|id, known|
     puts id if (not known)
+  }
+  puts "Known device IDs:"
+  new_ids.each{|id, known|
+    puts id if (known)
   }
 else
   puts "#{ARGV[2].chomp} is not a recognized command."
